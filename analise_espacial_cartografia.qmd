@@ -1,0 +1,265 @@
+# Módulo 5: Análise Espacial e Cartografia
+
+A análise espacial e a cartografia temática representam a distribuição territorial de fenômenos demográficos, sociais e econômicos. No R, a integração entre o pacote `sf` (simple features), o pacote `geobr` (malhas territoriais oficiais do IBGE) e a extensão `ggspatial` permite manipular objetos geográficos, converter projeções cartográficas (CRS), padronizar chaves territoriais e construir mapas cloropléticos completos com escala, rosa dos ventos e encartes de localização.
+
+## Pacotes Necessários
+* `sf`
+* `geobr`
+* `ggspatial`
+* `ggplot2`
+
+---
+
+## Importação e Malhas Territoriais do IBGE (`geobr` e `sf`)
+
+### Baixar malhas municipais do IBGE
+```R
+read_municipality(
+  code_muni = "MG", # Sigla da UF ou código do município (ou "ALL")
+  year = 2022, # Ano de referência da malha
+  simplified = TRUE # Carregar versão simplificada para mapas leves
+)
+```
+
+Importante: Função do pacote `geobr`. Baixa diretamente o objeto espacial no formato `sf` em projeção SIRGAS 2000. O parâmetro `code_muni` aceita siglas de estados ou o código de 7 dígitos.
+
+### Baixar malhas estaduais do IBGE
+```R
+read_state(
+  code_state = "ALL", # Sigla do estado ou "ALL" para o Brasil inteiro
+  year = 2022 # Ano da malha
+)
+```
+
+Importante: Carrega os polígonos das Unidades da Federação brasileira diretamente do repositório de dados espaciais do `geobr`.
+
+### Baixar malhas das Grandes Regiões
+```R
+read_region(
+  year = 2022 # Ano de referência
+)
+```
+
+Importante: Retorna os limites geográficos das cinco Grandes Regiões brasileiras (Norte, Nordeste, Sudeste, Sul e Centro-Oeste).
+
+### Baixar malhas de Regiões Intermediárias
+```R
+read_intermediate_region(
+  code_intermediate = "MG", # Sigla da UF ou código da região
+  year = 2022 # Ano de referência
+)
+```
+
+Importante: Carrega a divisão regional intermediária do IBGE (que substituiu as antigas mesorregiões a partir de 2017).
+
+### Baixar malhas de Microrregiões
+```R
+read_microregion(
+  code_micro = 31001, # Código da microrregião ou sigla da UF
+  year = 2022 # Ano de referência
+)
+```
+
+Importante: Retorna a malha geográfica das microrregiões do IBGE.
+
+### Baixar malhas de Áreas de Ponderação Censitárias
+```R
+read_weighting_area(
+  code_weighting = 3106200, # Código do município
+  year = 2010 # Ano do Censo Demográfico
+)
+```
+
+Importante: Baixa as áreas de ponderação usadas para amostragem dos microdados do Censo Demográfico do IBGE.
+
+### Importar vetores espaciais de disco
+```R
+st_read(
+  dsn = "dados/brutos/mapa_natalidade_am.rds" # Caminho do arquivo espacial
+)
+```
+
+Importante: Função do pacote `sf` para leitura de arquivos de dados espaciais em disco nos formatos GeoJSON, Shapefile (`.shp`), GeoPackage (`.gpkg`) ou RDS contendo objeto `sf`.
+
+---
+
+## Sistemas de Referência de Coordenadas e Projeções (CRS)
+
+### Consultar o sistema de projeção do objeto espacial
+```R
+st_crs(
+  x = mapa_sf # Objeto espacial da classe sf
+)
+```
+
+Importante: Retorna o CRS (Coordinate Reference System) atual do objeto, identificando a projeção (ex: Policônica) e o Datum (ex: SIRGAS 2000 ou WGS 84).
+
+### Projetar e reprojectar coordenadas espaciais
+```R
+st_transform(
+  x = mapa_am, # Objeto espacial sf
+  crs = 5880 # Código EPSG da projeção de destino
+)
+```
+
+Importante: Reordena e transforma matematicamente as coordenadas dos polígonos para o sistema desejado. O código EPSG 5880 corresponde à Projeção Policônica do Brasil no Datum SIRGAS 2000 (essencial para medição de áreas e barras de escala em mapas nacionais). Para latitude/longitude usa-se EPSG 4674 (SIRGAS 2000) ou 4326 (WGS 84).
+
+### Manipular a coluna de geometria espacial
+```R
+st_geometry(
+  obj = mapa_sf # Objeto espacial sf
+)
+```
+
+Importante: Acessa diretamente a coluna especial que armazena os vértices e polígonos do objeto `sf`.
+
+### Remover a componente espacial da tabela
+```R
+st_drop_geometry(
+  x = mapa_sf # Objeto espacial sf
+)
+```
+
+Importante: Descarta a coluna de geometrias espaciais e devolve um data frame comum, acelerando agrupamentos e operações tabulares que não exigem mapas.
+
+---
+
+## Propriedades e Operações Espaciais
+
+### Calcular área dos polígonos
+```R
+st_area(
+  x = mapa_sf # Objeto espacial de polígonos
+)
+```
+
+Importante: Retorna o cálculo da área de cada polígono. Se o CRS for geográfico (graus), retorna a área geodésica em metros quadrados.
+
+### Calcular centroide geométrico de áreas
+```R
+st_centroid(
+  x = mapa_sf # Objeto espacial sf
+)
+```
+
+Importante: Calcula o ponto geométrico central (centroide) de cada polígono. Útil para posicionar rótulos ou converter áreas em pontos.
+
+### Obter limites geográficos do mapa (Bounding Box)
+```R
+st_bbox(
+  obj = mapa_am # Objeto espacial sf
+)
+```
+
+Importante: Retorna um vetor com os valores extremos do mapa: `xmin` (longitude mínima), `ymin` (latitude mínima), `xmax` (longitude máxima) e `ymax` (latitude máxima). Indispensável para posicionar elementos flutuantes no gráfico.
+
+### Junção espacial topológica
+```R
+st_join(
+  x = pontos_sf, # Primeira camada espacial
+  y = poligonos_sf, # Segunda camada espacial
+  join = st_intersects # Relação topológica
+)
+```
+
+Importante: Cruza duas camadas espaciais com base na posição geográfica de seus elementos (ex: identificar em qual município cai cada ponto de coordenada).
+
+---
+
+## Chaves Territoriais e Compatibilização de Códigos IBGE
+
+### Padronização de chaves de 6 vs 7 dígitos
+```R
+mutate(
+  .data = tabela_datasus, # Tabela com código de 6 dígitos
+  cod_ibge_6 = substr(cod_ibge_7, 1, 6) # Truncamento dos 6 primeiros dígitos
+)
+```
+
+Importante: A causa número um de insucesso no cruzamento de dados públicos com mapas (resultando em mapas inteiramente cinzas) é a divergência de chaves: os códigos de municípios do IBGE contêm 7 dígitos (incluindo o dígito verificador), enquanto o DATASUS (SIM e SINASC) utiliza o código `CODMUNRES` de apenas 6 dígitos. A solução exige truncar o 7º dígito antes de realizar o `left_join()`.
+
+### Adicionar rótulos estaduais e nomes de UF
+```R
+rotula_uf(
+  d = tabela_com_sigla # Data frame contendo a coluna da sigla da UF
+)
+```
+
+Importante: Função utilitária dos scripts para mapear siglas estaduais em nomes completos e aplicar o fator com a ordem correta para exibição em legendas.
+
+---
+
+## Mapas Temáticos e Elementos Cartográficos (`geom_sf` e `ggspatial`)
+
+### Desenhar camada espacial de polígonos ou linhas
+```R
+geom_sf(
+  mapping = aes(fill = tbn), # Mapeamento da variável que define a cor
+  color = "white", # Cor das linhas de fronteira
+  linewidth = 0.15 # Espessura da linha de fronteira
+)
+```
+
+Importante: Camada do `ggplot2` própria para objetos da classe `sf`. Desenha automaticamente polígonos, linhas ou pontos de acordo com a coluna de geometria.
+
+### Ajustar coordenadas e datum visual do mapa
+```R
+coord_sf(
+  datum = NA, # Ocultar a grade de coordenadas em graus
+  xlim = c(-73, -56) # Limites da janela de exibição no eixo X
+)
+```
+
+Importante: Ajusta a janela de visualização espacial. Passar `datum = NA` remove as linhas e rótulos do gradeado de latitude/longitude, limpando o visual de mapas municipais.
+
+### Aplicar gradiente contínuo de cores
+```R
+scale_fill_gradientn(
+  colours = c("#f5f5f5", "#d35400", "#78281f"), # Vetor de cores da paleta
+  name = "Por mil" # Título da escala na legenda
+)
+```
+
+Importante: Define uma paleta de gradiente de cores suave com `n` nós de cores interpolados para representar variáveis numéricas contínuas em mapas cloropléticos.
+
+### Adicionar barra de escala cartográfica
+```R
+annotation_scale(
+  location = "bl", # Posição ("bl" = bottom left / inferior esquerdo)
+  width_hint = 0.22, # Proporção da largura ocupada pela escala
+  text_cex = 0.7, # Tamanho do texto da escala
+  style = "ticks" # Estilo visual ("ticks" ou "bar")
+)
+```
+
+Importante: Função do pacote `ggspatial`. Insere uma barra de escala cartográfica precisa baseada na projeção e nas unidades do objeto `sf`. Exige que o mapa esteja projetado (ex: EPSG 5880).
+
+### Adicionar rosa dos ventos / indicação do Norte
+```R
+annotation_north_arrow(
+  location = "tr", # Posição ("tr" = top right / superior direito)
+  height = unit(0.75, "cm"), # Altura do elemento
+  width = unit(0.75, "cm"), # Largura do elemento
+  style = north_arrow_orienteering(text_size = 8) # Estilo do indicador do Norte
+)
+```
+
+Importante: Função do pacote `ggspatial`. Desenha a indicação da orientação do Norte no mapa.
+
+### Encaixar mapa de localização (Encarte)
+```R
+annotation_custom(
+  grob = ggplotGrob(mapa_localizacao), # Objeto gráfico do mapa secundário
+  xmin = -73, xmax = -68, # Limites de inserção na coordenada X
+  ymin = -2, ymax = 2 # Limites de inserção na coordenada Y
+)
+```
+
+Importante: Permite inserir um pequeno mapa de contexto regional/nacional (convertido em Grob com `ggplotGrob()`) dentro de um canto livre do mapa principal.
+
+### Aplicar tema limpo sem eixos para cartografia
+```R
+theme_void()
+```
+
+Importante: Tema padrão do `ggplot2` que remove todos os eixos, rótulos de eixos, fundos e linhas de grade. Essencial para compor mapas de localização e encartes.

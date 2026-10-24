@@ -1,0 +1,488 @@
+# Módulo 2: Manipulação, Limpeza e Data Wrangling
+
+A etapa de manipulação e limpeza (data wrangling) organiza e transforma bases brutas em tabelas no formato tidy (onde cada linha representa uma observação e cada coluna uma variável). Utilizando os verbos do `dplyr`, `tidyr` e `forcats`, realiza-se a seleção, filtragem, transformação condicional, recodificação de fatores, agrupamento, sumarização, junção de tabelas (joins) e pivotagem.
+
+## Pacotes Necessários
+* `dplyr`
+* `tidyr`
+* `forcats`
+
+---
+
+## Inspeção e Estruturação Inicial
+
+### Visualizar estrutura resumida da tabela
+```R
+glimpse(
+  x = setores # Data frame ou tibble
+)
+```
+
+Importante: Função do `dplyr` semelhante ao `str()`, exibe o número de linhas, colunas, tipos e os primeiros valores de cada variável sem truncar os nomes das colunas.
+
+### Exibir estrutura interna e tipos de dados
+```R
+str(
+  object = setores # Objeto a ser inspecionado
+)
+```
+
+Importante: Função do R base que detalha a estrutura de objetos, incluindo listas, fatores, vetores e data frames.
+
+### Criar um data frame nativo
+```R
+data.frame(
+  cod_uf = c("31", "35"), # Vetor com códigos
+  uf = c("MG", "SP") # Vetor com siglas
+)
+```
+
+Importante: Constrói uma tabela nativa no R base. Por padrão em versões recentes do R não converte caracteres em fatores automaticamente (`stringsAsFactors = FALSE`).
+
+### Converter tabela em tibble
+```R
+as_tibble(
+  x = df_dados # Data frame comum
+)
+```
+
+Importante: Converte data frames convencionais no formato `tibble` do tidyverse, que oferece uma exibição mais limpa no console e não altera tipos de colunas.
+
+### Criar tibble linha por linha
+```R
+tribble(
+  ~cod, ~nome, ~porte, # Nomes das colunas precedidos por til
+  "3106200", "Belo Horizonte", "Capital", # Primeira linha de dados
+  "3143302", "Montes Claros", "Pequena" # Segunda linha de dados
+)
+```
+
+Importante: Função do `tibble`/`dplyr` útil para criar pequenas tabelas de referência de forma legível e alinhada por linhas diretamente no script.
+
+---
+
+## Seleção e Filtragem de Dados
+
+### Selecionar linhas por condições lógicas
+```R
+filter(
+  .data = setores, # Tabela de dados
+  situacao == "Urbana", # Primeira condição lógica
+  populacao > 1000 # Segunda condição lógica (E lógico)
+)
+```
+
+Importante: Mantém apenas as linhas que atendem a todas as condições informadas. Para condições alternadas (OU lógico), utiliza-se o operador `|`. O aviso de conflito `dplyr::filter()` indica precedência sobre `stats::filter()`.
+
+### Selecionar e reordenar colunas
+```R
+select(
+  .data = setores, # Tabela de dados
+  CD_SETOR, NM_MUN, populacao # Colunas a serem mantidas
+)
+```
+
+Importante: Mantém apenas as colunas especificadas. Para desmarcar/remover uma coluna, utiliza-se o sinal de menos `-coluna`. Aceita seletores genéricos como `starts_with()`, `ends_with()` e `contains()`.
+
+### Selecionar linhas por posição
+```R
+slice(
+  .data = setores, # Tabela de dados
+  n = 1:10 # Intervalo de posições de linhas
+)
+```
+
+Importante: Extrai linhas específicas por seu índice numérico de posição. As variantes `slice_max()` e `slice_min()` selecionam as maiores ou menores observações com base em uma variável.
+
+### Reordenar a posição das colunas
+```R
+relocate(
+  .data = setores, # Tabela de dados
+  NM_MUN, # Coluna a mover
+  .before = area_km2 # Posição de destino (antes de)
+)
+```
+
+Importante: Altera a ordem física das colunas na tabela sem remover nenhuma variável. Utiliza os argumentos `.before` ou `.after`.
+
+### Renomear colunas existentes
+```R
+rename(
+  .data = setores, # Tabela de dados
+  codigo_setor = CD_SETOR, # novo_nome = nome_antigo
+  nome_municipio = NM_MUN # novo_nome = nome_antigo
+)
+```
+
+Importante: A sintaxe segue sempre a ordem `novo_nome = nome_antigo`. Mantém todas as demais colunas não renomeadas intactas.
+
+---
+
+## Criando e Transformando Variáveis
+
+### Criar ou modificar colunas
+```R
+mutate(
+  .data = setores, # Tabela de dados
+  densidade = round(populacao / area_km2, 1) # Nova coluna calculada
+)
+```
+
+Importante: O `mutate()` adiciona novas colunas no final da tabela mantendo todas as colunas originais. Como opera de forma vetorizada, a conta é aplicada a todas as linhas simultaneamente.
+
+### Criar colunas descartando as originais
+```R
+transmute(
+  .data = setores, # Tabela de dados
+  NM_MUN = NM_MUN, # Coluna mantida
+  densidade = round(populacao / area_km2, 1) # Nova coluna
+)
+```
+
+Importante: O `transmute()` equivale a aplicar um `mutate()` seguido de um `select()`, mantendo no resultado apenas as variáveis explicitamente criadas ou nomeadas.
+
+### Aplicar transformações a múltiplas colunas
+```R
+across(
+  .cols = where(is.numeric), # Colunas selecionadas
+  .fns = round, # Função a aplicar
+  digits = 2 # Argumentos adicionais da função
+)
+```
+
+Importante: Usado dentro do `mutate()` ou `summarise()` para aplicar uma ou mais funções a um conjunto de colunas selecionadas por nome ou tipo.
+
+### Selecionar colunas por predicado do tipo
+```R
+where(
+  fn = is.numeric # Função de teste lógico de tipo
+)
+```
+
+Importante: Auxiliar do `across()` e `select()` para selecionar colunas que satisfazem uma condição do tipo de dados (ex: `is.numeric`, `is.character`).
+
+### Habilitar cálculos por linha
+```R
+rowwise(
+  data = dataframe # Tabela de dados
+)
+```
+
+Importante: Altera o comportamento das funções seguintes para operarem linha a linha em vez de vetorizadas. Utilizado frequentemente junto com `c_across()`.
+
+### Selecionar colunas em cálculos por linha
+```R
+c_across(
+  cols = c("col1", "col2") # Nomes das colunas
+)
+```
+
+Importante: Usado dentro do `mutate()` em tabelas modificadas por `rowwise()` para agregar valores de colunas na mesma linha (ex: `sum(c_across(...))`).
+
+---
+
+## Transformações Condicionais
+
+### Avaliação condicional vetorizada simples
+```R
+ifelse(
+  test = situacao == "Urbana", # Condição lógica
+  yes = 1, # Valor se VERDADEIRO
+  no = 0 # Valor se FALSO
+)
+```
+
+Importante: Função do R base. Não checa rigorosamente a igualdade do tipo de dados retornado entre o resultado verdadeiro e o falso.
+
+### Avaliação condicional estrita no tidyverse
+```R
+if_else(
+  condition = situacao == "Urbana", # Condição lógica
+  true = 1L, # Valor se VERDADEIRO
+  false = 0L, # Valor se FALSO
+  missing = 0L # Valor se ausente (NA)
+)
+```
+
+Importante: Exige estritamente que os valores de `true` e `false` sejam do mesmo tipo de dado (ex: ambos inteiros `L`, ambos numéricos ou ambos caracteres).
+
+### Múltiplas condições encadeadas
+```R
+case_when(
+  populacao < 5000 ~ "Até 5 mil", # Condição 1 ~ Rótulo 1
+  populacao < 20000 ~ "5 mil a 20 mil", # Condição 2 ~ Rótulo 2
+  populacao < 100000 ~ "20 mil a 100 mil", # Condição 3 ~ Rótulo 3
+  TRUE ~ "Mais de 1 milhão" # Condição padrão (demais casos)
+)
+```
+
+Importante: Avalia as condições na ordem digitada. O caso padrão final é indicado por `TRUE ~ valor`. Todos os resultados à direita do til `~` devem ter o mesmo tipo de dado.
+
+---
+
+## Manipulação de Variáveis Categóricas (Fatores)
+
+### Criar variável do tipo fator
+```R
+factor(
+  x = municipios$porte, # Vetor de caracteres ou numérico
+  levels = c("Pequeno", "Médio", "Grande"), # Ordem explícita dos níveis
+  labels = c("Pequeno", "Médio", "Grande"), # Rótulos de exibição
+  ordered = FALSE # Fator ordinal se TRUE
+)
+```
+
+Importante: Armazena dados categóricos como inteiros com rótulos associados. A definição de `levels` garante a ordenação correta em tabelas e eixos de gráficos, sobrepondo a ordem alfabética.
+
+### Consultar níveis de um fator
+```R
+levels(
+  x = setores$situacao # Vetor do tipo fator
+)
+```
+
+Importante: Retorna um vetor de caracteres indicando as categorias e a ordem dos níveis definidos no fator.
+
+### Obter o número de níveis do fator
+```R
+nlevels(
+  x = setores$situacao # Vetor do tipo fator
+)
+```
+
+Importante: Retorna a contagem total de categorias/níveis existentes no fator.
+
+### Reordenar níveis de fator manualmente
+```R
+fct_relevel(
+  .f = fator_uf, # Variável do tipo fator
+  "Amapá", "Rio Grande do Sul" # Níveis puxados para as primeiras posições
+)
+```
+
+Importante: Função do pacote `forcats`. Permite mover níveis específicos para o início da ordem sem alterar a estrutura das demais categorias.
+
+### Reordenar níveis com base em variável numérica
+```R
+fct_reorder(
+  .f = municipio_fator, # Fator a ser reordenado
+  .x = populacao, # Variável numérica de referência
+  .fun = median # Função de agregação
+)
+```
+
+Importante: Ordena as categorias do fator com base nas estatísticas de uma variável numérica associada (ex: ordenar municípios pela população). Ideal para ajustar a ordem das barras no `ggplot2`.
+
+### Ordenar níveis por frequência de ocorrência
+```R
+fct_infreq(
+  .f = fator_regiao # Variável do tipo fator
+)
+```
+
+Importante: Reordena os níveis do fator colocando primeiro as categorias que aparecem com maior frequência na base de dados.
+
+### Agrupar categorias de baixa frequência
+```R
+fct_lump(
+  .f = fator_municipio, # Variável do tipo fator
+  n = 5, # Número de categorias principais a manter
+  other_level = "Outros" # Rótulo para as categorias agrupadas
+)
+```
+
+Importante: Mantém as `n` categorias mais frequentes e agrupa todas as demais em um único nível rotulado como `"Outros"`.
+
+### Anonimizar níveis de um fator
+```R
+fct_anon(
+  .f = fator_id # Variável do tipo fator
+)
+```
+
+Importante: Substitui os rótulos originais dos níveis do fator por códigos numéricos aleatórios, preservando a igualdade dos grupos sem expor identidades.
+
+---
+
+## Agrupamento, Sumarização e Ordenação
+
+### Agrupar tabela por variáveis
+```R
+group_by(
+  .data = setores, # Tabela de dados
+  NM_REGIAO # Coluna de agrupamento
+)
+```
+
+Importante: Não altera o aspecto visual da tabela; adiciona metadados de estrutura agrupada. Todas as operações seguintes (como `summarise` e `mutate`) passam a ser executadas dentro de cada grupo.
+
+### Agregar e resumir dados por grupos
+```R
+summarise(
+  .data = setores_agrupados, # Tabela agrupada
+  populacao = sum(populacao), # Função de agregação
+  .groups = "drop" # Comportamento do agrupamento resultante
+)
+```
+
+Importante: Reduz cada grupo de observações a apenas uma linha resumo. O argumento `.groups = "drop"` desfaz explicitamente o agrupamento restante, evitando que cálculos posteriores continuem retidos por grupo.
+
+### Desfazer agrupamento da tabela
+```R
+ungroup(
+  x = setores_agrupados # Tabela agrupada
+)
+```
+
+Importante: Remove completamente quaisquer marcas de agrupamento prévias da tabela. Essencial quando se deseja calcular totais gerais ou percentuais sobre toda a base após um `mutate()` por grupo.
+
+### Contar número de observações no grupo
+```R
+n()
+```
+
+Importante: Usado exclusivamente dentro de `summarise()`, `mutate()` ou `filter()` para obter o total de linhas presentes no grupo atual.
+
+### Contar valores únicos/distintos
+```R
+n_distinct(
+  x = setores$CD_MUN # Vetor ou coluna
+)
+```
+
+Importante: Retorna a quantidade de valores diferentes e não nulos contidos em um vetor (ex: número de municípios distintos).
+
+### Contar ocorrências por grupo
+```R
+count(
+  x = setores, # Tabela de dados
+  NM_REGIAO, # Coluna para agrupamento e contagem
+  sort = TRUE, # Ordenar por contagem decrescente
+  name = "total_setores" # Nome da coluna de contagem gerada
+)
+```
+
+Importante: Atalho do `dplyr` que combina `group_by()`, `summarise(n = n())` e `ungroup()` em uma única chamada.
+
+### Ordenar linhas da tabela
+```R
+arrange(
+  .data = setores, # Tabela de dados
+  populacao # Coluna de ordenação (crescente por padrão)
+)
+```
+
+Importante: Reordena as linhas da tabela. Por padrão organiza em ordem crescente. Não altera valores de células, apenas a sequência visual das observações.
+
+### Inverter para ordem decrescente
+```R
+desc(
+  x = populacao # Coluna de ordenação
+)
+```
+
+Importante: Usado dentro de `arrange(desc(coluna))` ou `order()` para ordenar os valores do maior para o menor.
+
+---
+
+## Combinação e Junção de Tabelas (Joins e Pivots)
+
+### Junção à esquerda (Left Join)
+```R
+left_join(
+  x = tabela_principal, # Tabela base (todas as linhas ficam)
+  y = tabela_secundaria, # Tabela que fornece colunas adicionais
+  by = c("cod_mun" = "CD_MUN") # Chaves de ligação
+)
+```
+
+Importante: Preserva TODAS as linhas da tabela à esquerda `x`. Quando não encontra correspondência na tabela `y`, preenche os novos campos com `NA`.
+
+### Junção à direita (Right Join)
+```R
+right_join(
+  x = tabela_secundaria, # Tabela complementar
+  y = tabela_principal, # Tabela base (todas as linhas ficam)
+  by = "cod_mun" # Chave de ligação
+)
+```
+
+Importante: Preserva TODAS as linhas da tabela à direita `y`, descartando linhas de `x` sem par correspondente.
+
+### Junção de interseção (Inner Join)
+```R
+inner_join(
+  x = tabela_nascimentos, # Primeira tabela
+  y = tabela_populacao, # Segunda tabela
+  by = c("uf", "ano") # Chave dupla de ligação
+)
+```
+
+Importante: Mantém apenas as linhas cujas chaves de ligação existam simultaneamente em AMBAS as tabelas `x` e `y`.
+
+### Junção total (Full Join)
+```R
+full_join(
+  x = tabela_a, # Primeira tabela
+  y = tabela_b, # Segunda tabela
+  by = "chave" # Chave de ligação
+)
+```
+
+Importante: Mantém todas as linhas de ambas as tabelas. Preenche com `NA` os campos de lados que não possuem correspondência.
+
+### Filtragem de correspondência (Semi Join)
+```R
+semi_join(
+  x = tabela_municipios, # Tabela a ser filtrada
+  y = tabela_com_casos, # Tabela de referência
+  by = "cod_mun" # Chave de ligação
+)
+```
+
+Importante: Funciona como um filtro: mantém as linhas de `x` que possuem par em `y`, sem adicionar novas colunas vindas de `y` nem duplicar linhas.
+
+### Filtragem de desencontro (Anti Join)
+```R
+anti_join(
+  x = tabela_municipios, # Tabela a ser filtrada
+  y = tabela_invalidos, # Tabela de exclusão
+  by = "cod_mun" # Chave de ligação
+)
+```
+
+Importante: Mantém apenas as linhas de `x` que NÃO possuem nenhuma correspondência na tabela `y`. Útil para diagnosticar inconsistências de códigos entre bases públicas.
+
+### Empilhar tabelas por linhas
+```R
+bind_rows(
+  tabela_am, # Primeira tabela
+  tabela_rj, # Segunda tabela
+  .id = "origem" # Coluna indicadora da tabela de origem
+)
+```
+
+Importante: Une tabelas verticalmente encadeando suas linhas. Se os nomes de colunas forem diferentes entre as tabelas, cria todas as colunas necessárias preenchendo ausências com `NA`.
+
+### Converter de formato largo para longo
+```R
+pivot_longer(
+  data = tabela_larga, # Tabela original
+  cols = c("Homens", "Mulheres"), # Colunas a serem empilhadas
+  names_to = "sexo", # Nome da nova coluna de categorias
+  values_to = "populacao" # Nome da nova coluna de valores
+)
+```
+
+Importante: Função do `tidyr`. Reduz o número de colunas e multiplica o número de linhas. Necessário para preparar dados para mapeamento estético no `ggplot2`.
+
+### Converter de formato longo para largo
+```R
+pivot_wider(
+  data = tabela_longa, # Tabela original
+  names_from = sexo, # Coluna cujas categorias virarão nomes de colunas
+  values_from = populacao # Coluna cujos valores preencherão as novas células
+)
+```
+
+Importante: Função do `tidyr`. Espalha categorias de uma coluna em múltiplas colunas na horizontal. Essencial para efetuar operações entre categorias (ex: dividir Homens por Mulheres para calcular a razão de sexo).

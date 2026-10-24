@@ -1,0 +1,46 @@
+# Apresentação {.unnumbered}
+
+Bem-vindo ao **Guia Prático de R em Estatísticas Públicas**!
+
+Este repositório modular foi desenvolvido para consulta rápida, pesquisa direta e cópia de rotinas em R aplicadas a dados demográficos e sociais (IBGE, DATASUS, SINASC, SIM).
+
+------------------------------------------------------------------------
+
+## Estrutura do Material
+
+O livro está organizado em 5 módulos práticos:
+
+- **Módulo 1: Importação, Leitura e Diagnóstico de Dados** — Leitura de arquivos CSV (Brasil/EUA), Excel, Parquet, requisições SIDRA/IBGE e diagnósticos de integridade.
+
+- **Módulo 2: Manipulação, Limpeza e Data Wrangling** — Verbos do `dplyr`, tratamento de fatores, variáveis condicionais (`case_when`) e cruzamentos de tabelas (`joins`).
+
+- **Módulo 3: Indicadores Demográficos e Estatísticas Públicas** — Razões de sexo, dependência, envelhecimento, indicadores de natalidade/fecundidade do SINASC e mortalidade do SIM.
+
+- **Módulo 4: Visualização de Dados e Gráficos (`ggplot2`)** — Construção de gráficos de barras, linhas, pirâmides etárias, painéis (`facets`) e temas cartográficos.
+
+- **Módulo 5: Análise Espacial e Cartografia (`sf`)** — Malhas territoriais do `geobr`, projeções cartográficas (CRS), chaves territoriais e mapas cloropléticos.
+
+------------------------------------------------------------------------
+
+## Pacotes Necessários (Instalação Global)
+
+Para reproduzir todos os códigos disponíveis neste livro, você precisará dos pacotes listados abaixo.
+
+### Comando único de instalação no R:
+
+``` r
+install.packages(c(
+  "tidyverse", "readxl", "arrow", "data.table", "jsonlite",
+  "sidrar", "microdatasus", "sf", "geobr", "ggspatial", "scales"
+))
+```
+
++---------------------------------------------+-----------------------------------------+--------------------------------------+-------------------------------------+-------------------------------------+
+| **Manipulação e Formatação Básica:**        | **Importação de Formatos Específicos:** | **Acesso a APIs de Dados Públicos:** | **Visualização Gráfica e Escalas:** | **Geoprocessamento e Cartografia:** |
++=============================================+=========================================+======================================+=====================================+=====================================+
+| - tidyverse (dplyr, tidyr, forcats, readr), | - readxl                                | - sidrar                             | - ggplot2                           | - sf                                |
+|                                             |                                         |                                      |                                     |                                     |
+| - data.table                                | - arrow                                 | - microdatasus                       | - scales                            | - geobr                             |
+|                                             |                                         |                                      |                                     |                                     |
+|                                             | - jsonlite                              |                                      |                                     | - ggspatial                         |
++---------------------------------------------+-----------------------------------------+--------------------------------------+-------------------------------------+-------------------------------------+

@@ -1,0 +1,313 @@
+# Módulo 4: Visualização de Dados e Gráficos
+
+A visualização de dados com `ggplot2` baseia-se na Gramática dos Gráficos (Grammar of Graphics), na qual gráficos são construídos pela sobreposição de camadas: dados, mapeamentos estéticos (`aes`), geometrias (`geom_*`), escalas (`scale_*`), sistemas de coordenadas (`coord_*`), facetamento (`facet_*`) e temas (`theme_*`). Este módulo compila todas as geometrias, construções de pirâmides etárias, escalas logarítmicas e personalizações gráficas presentes nos scripts.
+
+## Pacotes Necessários
+* `ggplot2`
+* `scales`
+
+---
+
+## Mapeamento Estético e Estrutura Principal
+
+### Declarar estrutura base do gráfico
+```R
+ggplot(
+  data = dados_df, # Tabela de dados no formato longo
+  mapping = aes(x = faixa, y = populacao) # Mapeamento estético global
+)
+```
+
+Importante: O `ggplot()` inicia a construção gráfica. Aceita dados e mapeamentos estéticos globais que serão herdados por todas as camadas geométricas subsequentes.
+
+### Mapeamento estético de atributos visuais
+```R
+aes(
+  x = ano, # Variável do eixo horizontal
+  y = tft, # Variável do eixo vertical
+  color = uf_nome, # Variável para cor de linhas e pontos
+  fill = sexo, # Variável para cor de preenchimento de áreas e barras
+  group = uf_nome, # Variável para agrupamento de linhas
+  linetype = fonte # Variável para tipo de traço da linha
+)
+```
+
+Importante: Mapeia colunas da tabela para propriedades visuais do gráfico. Tudo o que depende do valor de uma variável deve ser declarado dentro de `aes()`; cores fixas ficam fora.
+
+---
+
+## Geometrias Principais (`geom_*`)
+
+### Desenhar gráfico de barras por valores
+```R
+geom_col(
+  position = "stack", # Empilhamento ("stack", "dodge" ou "fill")
+  width = 0.8, # Largura das barras
+  fill = "#d35400" # Cor fixa de preenchimento (se fora do aes)
+)
+```
+
+Importante: O `geom_col()` utiliza os valores numéricos já presentes na coluna mapeada no eixo `y`. Para barras lado a lado por grupo, utiliza-se `position = "dodge"`.
+
+### Desenhar gráfico de barras por contagem
+```R
+geom_bar(
+  stat = "count" # Contagem automática de frequências
+)
+```
+
+Importante: Diferente do `geom_col()`, o `geom_bar()` calcula automaticamente a contagem de observações/linhas para cada categoria mapeada no eixo `x`.
+
+### Desenhar gráfico de linhas
+```R
+geom_line(
+  linewidth = 1.1, # Espessura da linha (antigo argumento size)
+  linetype = "solid" # Tipo de traço ("solid", "dashed", "dotted")
+)
+```
+
+Importante: Conecta os pontos ordenados ao longo do eixo `x`. Requer o argumento `group` no `aes()` quando se deseja desenhar uma linha separada para cada categoria.
+
+### Desenhar gráfico de pontos (Dispersão)
+```R
+geom_point(
+  size = 2, # Tamanho do ponto
+  shape = 16, # Formato do ponto
+  alpha = 0.7 # Transparência (0 transparente a 1 opaco)
+)
+```
+
+Importante: Utilizado para gráficos de dispersão entre duas variáveis quantitativas ou para destacar observações pontuais sobre linhas.
+
+### Desenhar histograma de distribuição
+```R
+geom_histogram(
+  bins = 30, # Número de intervalos/barras
+  binwidth = 5, # Amplitude de cada intervalo
+  fill = "#c0563b" # Cor de preenchimento
+)
+```
+
+Importante: Mapeia apenas a variável quantitativa contínua no eixo `x`. O eixo `y` é calculado automaticamente como a contagem de casos naquele intervalo.
+
+### Desenhar diagramas de caixa (Boxplot)
+```R
+geom_boxplot(
+  outlier.colour = "red", # Cor dos pontos discrepantes
+  outlier.size = 1.5 # Tamanho dos outliers
+)
+```
+
+Importante: Resume a distribuição de uma variável quantitativa em 5 números (mínimo, 1º quartil, mediana, 3º quartil e máximo), permitindo comparar distribuições por categorias.
+
+### Desenhar curva de densidade de probabilidade
+```R
+geom_density(
+  alpha = 0.5, # Transparência do preenchimento
+  fill = "#15485b" # Cor da área
+)
+```
+
+Importante: Estima e desenha a função de densidade de probabilidade suave de uma variável contínua.
+
+### Desenhar linhas de referência verticais ou horizontais
+```R
+geom_hline(
+  yintercept = 100, # Posição de corte no eixo Y
+  linetype = "dashed", # Tipo de traço
+  color = "#7f8c8d" # Cor da linha
+)
+```
+
+Importante: Adiciona linhas de referência ortogonais ao gráfico (ex: linha de reposição demográfica em `yintercept = 2.1` ou igualdade em `yintercept = 100`). O equivalente vertical é `geom_vline(xintercept = ...)` .
+
+### Desenhar segmentos de linha entre coordenadas
+```R
+geom_segment(
+  mapping = aes(x = x1, y = y1, xend = x2, yend = y2) # Coordenadas de início e fim
+)
+```
+
+Importante: Desenha retas ligando pontos com coordenadas iniciais e finais especificadas.
+
+---
+
+## Construção de Pirâmides Etárias
+
+### Inverter o eixo cartesiano (Deitar barras)
+```R
+coord_flip()
+```
+
+Importante: Troca os eixos X e Y de posição. Na pirâmide etária, permite exibir as 19 faixas etárias deitadas na horizontal para evitar sobreposição dos rótulos.
+
+### Mascarar sinal negativo no eixo da pirâmide etária
+```R
+scale_y_continuous(
+  labels = function(x) paste0(abs(x), "%") # Aplicação da função valor absoluto abs()
+)
+```
+
+Importante: Como a pirâmide etária é construída atribuindo sinal negativo à proporção masculina (`if_else(sexo == "Homens", -prop, prop)`), o `abs(x)` oculta o sinal negativo no eixo visual do gráfico.
+
+---
+
+## Divisão em Painéis (Facetamento)
+
+### Facetamento por uma variável
+```R
+facet_wrap(
+  facets = ~ uf_nome, # Variável de divisão precedida por til
+  ncol = 2, # Número de colunas de painéis
+  scales = "free_x" # Escalas livres ("fixed", "free", "free_x", "free_y")
+)
+```
+
+Importante: Divide o gráfico em múltiplos subpainéis organizados em grade com base em uma variável categórica. `scales = "free_x"` permite limites independentes no eixo X entre os painéis.
+
+### Facetamento por duas variáveis (Matriz)
+```R
+facet_grid(
+  rows = vars(ano), # Variável das linhas da matriz
+  cols = vars(uf_nome) # Variável das colunas da matriz
+)
+```
+
+Importante: Cria uma matriz bidimensional rígida de painéis cruzando duas variáveis categóricas (ex: linhas por ano e colunas por Unidade da Federação). A sintaxe legada utiliza a fórmula `ano ~ uf_nome`.
+
+---
+
+## Escalas Numéricas, Logarítmicas e de Cores
+
+### Configurar eixos numéricos contínuos
+```R
+scale_x_continuous(
+  breaks = seq(2010, 2022, 3), # Marcas principais no eixo
+  limits = c(2010, 2022), # Limites do eixo
+  labels = scales::label_number(big.mark = ".") # Formatação numérica brasileira
+)
+```
+
+Importante: Controla marcas, limites e rótulos dos eixos contínuos. Evita que o ggplot exiba anos como números decimais (ex: 2012.5).
+
+### Transformação logarítmica de eixos
+```R
+scale_y_log10(
+  breaks = c(0.1, 1, 10, 100), # Posições das marcas no eixo log
+  labels = c("0,1", "1", "10", "100") # Rótulos personalizados
+)
+```
+
+Importante: Transforma a escala do eixo para base logarítmica de base 10. Indispensável para visualizar variáveis de alta assimetria (como PIB por habitante) e para retificar taxas de mortalidade por idade (curva em "J").
+
+### Definir cores manuais para linhas e pontos
+```R
+scale_color_manual(
+  values = c("Amazonas" = "#27ae60", "Rio Grande do Sul" = "#16729e") # Vetor nomeado
+)
+```
+
+Importante: Mapeia manualmente cores em hexadecimal ou nomeadas para categorias da variável atribuída ao atributo `color`.
+
+### Definir cores manuais para preenchimento
+```R
+scale_fill_manual(
+  values = c("Homens" = "#2980b9", "Mulheres" = "#c0392b"), # Vetor nomeado de cores
+  guide = "none" # Ocultar legenda se "none"
+)
+```
+
+Importante: Define as cores de preenchimento para geometrias com preenchimento (barras, áreas, polígonos).
+
+### Paletas sequenciais contínuas
+```R
+scale_fill_viridis_c(
+  option = "viridis", # Opções: "viridis", "magma", "placebo", "cividis"
+  direction = 1 # Direção da paleta (1 normal, -1 invertida)
+)
+```
+
+Importante: Paleta perceptual uniforme, ideal para dados contínuos em mapas e superfícies e acessível a daltônicos.
+
+### Paletas do ColorBrewer para dados discretos e contínuos
+```R
+scale_fill_brewer(
+  palette = "Set1" # Nome da paleta ColorBrewer
+)
+```
+
+Importante: Para dados contínuos/gradientes em mapas utilizam-se as variantes `scale_fill_distiller()` ou `scale_fill_fermenter()` (para intervalos legíveis).
+
+### Reordenar categorias no eixo gráfico
+```R
+reorder(
+  x = nome, # Variável categórica a ser reordenada
+  X = valor # Variável numérica que define a nova ordem
+)
+```
+
+Importante: Função base usada dentro do `aes(y = reorder(nome, valor))` para ordenar barras no gráfico do menor para o maior valor numérico.
+
+---
+
+## Rótulos, Temas e Exportação
+
+### Personalizar rótulos e títulos
+```R
+labs(
+  title = "Título Principal do Gráfico", # Título
+  subtitle = "Subtítulo detalhando o recorte de tempo e local", # Subtítulo
+  x = NULL, # Rótulo do eixo X (NULL apaga o rótulo)
+  y = "Taxa por mil habitantes", # Rótulo do eixo Y
+  color = "Legenda", # Título da legenda de cor
+  caption = "Fonte: IBGE. Elaboração própria." # Nota de rodapé / Fonte
+)
+```
+
+Importante: Centraliza a atribuição de todos os elementos de texto periféricos do gráfico. Passar `NULL` para um eixo remove seu texto descritivo quando este for redundante.
+
+### Adicionar texto solto ou anotação
+```R
+annotate(
+  geom = "text", # Tipo de anotação ("text", "rect", etc.)
+  x = 2011, # Coordenada X
+  y = 2.16, # Coordenada Y
+  label = "nível de reposição (2,1)", # Texto a exibir
+  hjust = 0, # Alinhamento horizontal (0 esquerda, 1 direita)
+  size = 3, # Tamanho da fonte
+  color = "#7f8c8d" # Cor do texto
+)
+```
+
+Importante: Insere elementos flutuantes no gráfico que não estão vinculados a colunas da tabela de dados mapeada.
+
+### Aplicar temas pré-definidos
+```R
+theme_minimal()
+```
+
+Importante: Altera globalmente o aspecto do gráfico (fontes, fundo, linhas de grade). Outros temas padrão incluem `theme_bw()`, `theme_classic()` e `theme_void()` (usado em mapas).
+
+### Personalização detalhada do tema
+```R
+theme(
+  legend.position = "bottom", # Posição da legenda ("none", "bottom", "top")
+  axis.text.x = element_text(angle = 45, hjust = 1, size = 8), # Rótulos do eixo X
+  panel.grid.minor = element_blank() # Ocultar grade secundária
+)
+```
+
+Importante: Modifica elementos individuais do tema gráfico. Alterações de texto utilizam `element_text()`, remoção de elementos utiliza `element_blank()` e retângulos de fundo utilizam `element_rect()`.
+
+### Exportar gráfico para arquivo
+```R
+ggsave(
+  filename = "grafico_populacao.png", # Caminho do arquivo de saída (.png, .pdf)
+  plot = last_plot(), # Gráfico a exportar (padrão é o último exibido)
+  width = 8, # Largura
+  height = 6, # Altura
+  dpi = 300 # Resolução em pontos por polegada
+)
+```
+
+Importante: Salva o gráfico gerado em disco com controle de dimensões e alta resolução para publicação.

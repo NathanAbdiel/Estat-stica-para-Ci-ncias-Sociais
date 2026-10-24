@@ -1,0 +1,31 @@
+project:
+  type: book
+
+book:
+  title: "Guia Prático de R em Estatísticas Públicas"
+  author: "Nathan Abdiel Campos dos Santos"
+  date: "2026"
+  search: true
+  sidebar:
+    style: "docked"
+    search: true
+  chapters:
+    - index.qmd
+    - importacao_leitura_diagnostico.qmd
+    - manipulacao_limpeza_dados.qmd
+    - indicadores_demograficos_publicos.qmd
+    - visualizacao_dados_ggplot.qmd
+    - analise_espacial_cartografia.qmd
+    - 06_estatistica_analitica_modelagem.qmd
+
+format:
+  html:
+    theme:
+      light: flatly          # Tema claro limpo e profissional
+      dark: darkly           # Alternador para modo escuro interativo!
+    code-copy: true          # Botão "Copiar" em todos os blocos de código
+    code-fold: false         # Exibe os blocos prontos para cópia
+    code-tools: true         # Ferramentas visuais nos blocos de código
+    toc: true                # Sumário na direita da página
+    toc-title: "Nesta página"
+    number-sections: false   # Títulos limpos sem numeração forçada

@@ -1,0 +1,436 @@
+# Módulo 1: Importação, Leitura e Diagnóstico de Dados
+
+A etapa de importação e diagnóstico prepara os dados para a análise. No contexto das estatísticas públicas brasileiras (IBGE, BCB, DATASUS, SICONFI), envolve a leitura de formatos diversos (CSV, Excel, RDS, Parquet, JSON), o acesso direto a APIs e o rigoroso diagnóstico de integridade (verificação de codificação, valores ausentes NAs e registros duplicados).
+
+## Pacotes Necessários
+* `readr`
+* `readxl`
+* `arrow`
+* `sidrar`
+* `microdatasus`
+* `data.table`
+* `jsonlite`
+
+---
+
+## Configuração do Ambiente e Ajuda
+
+### Consultar versão do R
+```R
+R.version.string
+```
+
+Importante: O R base fornece esta string de versão para verificação da compatibilidade do ambiente de trabalho.
+
+### Consultar diretório de trabalho
+```R
+getwd()
+```
+
+Importante: Retorna o caminho absoluto da pasta de trabalho atual onde os arquivos relativos serão procurados.
+
+### Alterar diretório de trabalho
+```R
+setwd(
+  dir = "C:/meu_projeto" # Caminho da pasta de trabalho
+)
+```
+
+Importante: No Windows deve-se usar barras normais `/` ou barras duplas `\\`. Em projetos organizados com `.Rproj`, evita-se alterar o diretório manualmente no script.
+
+### Instalar pacotes de R
+```R
+install.packages(
+  pkgs = c("readr", "readxl", "arrow", "sidrar") # Vetor com nomes dos pacotes
+)
+```
+
+Importante: A instalação é executada apenas uma vez por ambiente de trabalho e requer conexão com a internet.
+
+### Carregar pacote para uso na sessão
+```R
+library(
+  package = "tidyverse" # Nome do pacote a ser carregado
+)
+```
+
+Importante: No R base aceita o nome com ou sem aspas. O carregamento de pacotes do tidyverse pode exibir avisos de conflito com funções homônimas do R base (como `filter()` e `lag()`).
+
+### Verificar versão instalada de um pacote
+```R
+packageVersion(
+  pkg = "dplyr" # Nome do pacote
+)
+```
+
+Importante: Útil para garantir reprodutibilidade e checar se versões mínimas de pacotes necessários estão instaladas.
+
+### Acessar a documentação de uma função
+```R
+help(
+  topic = "mean" # Nome da função ou tópico
+)
+```
+
+Importante: A sintaxe equivalente no console é `?mean`. Exige o nome exato da função instalada no ambiente.
+
+### Buscar termos na documentação instalada
+```R
+help.search(
+  query = "regressao" # Termo de busca em texto livre
+)
+```
+
+Importante: A sintaxe equivalente no console é `??regressao`. Varre os arquivos de ajuda de todos os pacotes instalados.
+
+### Definir idioma do ambiente R
+```R
+Sys.setenv(
+  LANGUAGE = "en" # Código do idioma
+)
+```
+
+Importante: Configura as mensagens do sistema e erros do R para o idioma especificado, facilitando pesquisas de suporte.
+
+---
+
+## Leitura de Arquivos de Texto e CSV
+
+### Importar arquivo CSV internacional
+```R
+read_csv(
+  file = "dados/brutos/dados.csv", # Caminho ou URL do arquivo CSV
+  col_types = NULL # Especificação do tipo das colunas
+)
+```
+
+Importante: Utiliza o padrão internacional de delimitador por vírgula `,` e ponto `.` como separador decimal.
+
+### Importar arquivo CSV no padrão brasileiro
+```R
+read_csv2(
+  file = "dados/brutos/pop_municipios_mg.csv", # Caminho ou URL do arquivo CSV
+  locale = locale(encoding = "latin1") # Configuração de encoding e formato numérico
+)
+```
+
+Importante: `read_csv2()` utiliza ponto-e-vírgula `;` como separador de campos e vírgula `,` como separador decimal. O IBGE frequentemente utiliza a codificação `latin1` (ISO-8859-1).
+
+### Configurar especificação de local e encoding
+```R
+locale(
+  encoding = "latin1", # Codificação do texto (ex: latin1 ou UTF-8)
+  decimal_mark = ",", # Separador de decimais
+  grouping_mark = "." # Separador de milhar
+)
+```
+
+Importante: Passado no argumento `locale` das funções do pacote `readr` para garantir a interpretação correta de acentuação e números.
+
+### Identificar a codificação de caracteres do arquivo
+```R
+guess_encoding(
+  file = "dados/brutos/pop_municipios_mg.csv" # Caminho do arquivo de texto
+)
+```
+
+Importante: Examina os primeiros bytes do arquivo e sugere as codificações mais prováveis (como UTF-8 ou ISO-8859-1) com base no nível de confiança.
+
+### Leitura acelerada de arquivos texto tabulares
+```R
+fread(
+  input = "dados/brutos/setores_censitarios.csv", # Caminho do arquivo texto
+  sep = ";", # Separador de campos
+  dec = ",", # Separador decimal
+  encoding = "Latin-1", # Codificação de texto
+  select = c("CD_SETOR", "v0001"), # Colunas a serem lidas
+  colClasses = list(character = c("CD_SETOR")) # Forçar tipos de colunas
+)
+```
+
+Importante: Função do pacote `data.table` extremamente rápida e eficiente para leitura de bases públicas massivas (ex: agregados por setores censitários do IBGE).
+
+---
+
+## Leitura de Planilhas Eletrônicas (Excel)
+
+### Importar dados de planilha Excel
+```R
+read_excel(
+  path = "dados/brutos/pop_municipios_mg.xlsx", # Caminho da planilha .xlsx ou .xls
+  sheet = "Plan1", # Nome ou índice da aba
+  skip = 1, # Número de linhas iniciais a pular
+  na = c("", "NA", "-", "X", "9999999"), # Strings tratadas como valor ausente
+  col_types = c("text", "text", "numeric") # Tipos forçados de colunas
+)
+```
+
+Importante: O pacote `readxl` lê tanto o formato `.xlsx` moderno quanto o antigo `.xls`. Códigos territoriais com zeros à esquerda devem ser lidos como `"text"`.
+
+### Listar abas de uma planilha Excel
+```R
+excel_sheets(
+  path = "dados/brutos/planilha_ibge.xlsx" # Caminho da planilha Excel
+)
+```
+
+Importante: Devolve um vetor de caracteres com os nomes de todas as guias/abas contidas na planilha.
+
+---
+
+## Formatos Nativos do R e Dados Colunares
+
+### Carregar objeto binário único em formato RDS
+```R
+readRDS(
+  file = "dados/processados/pop_municipios_mg.rds" # Caminho do arquivo .rds
+)
+```
+
+Importante: O formato `.rds` armazena um único objeto binário de forma comprimida, preservando tipos e classes. Na leitura, a atribuição a uma variável é opcional e definida pelo usuário. O equivalente no `readr` é `read_rds()`.
+
+### Salvar objeto binário único em formato RDS
+```R
+saveRDS(
+  object = pop_mg, # Objeto a ser gravado em disco
+  file = "dados/processados/pop_municipios_mg.rds" # Caminho de destino do arquivo
+)
+```
+
+Importante: Ideal para salvar dados intermediários processados no R, mantendo fatores e atributos intactos sem perda de estrutura. O equivalente no `readr` é `write_rds()`.
+
+### Carregar múltiplos objetos salvos em RData
+```R
+load(
+  file = "dados/processados/dados_mg.RData" # Caminho do arquivo .RData
+)
+```
+
+Importante: O formato `.RData` restaura diretamente os objetos salvos na sessão com seus nomes originais, podendo sobrescrever objetos existentes sem aviso prévio.
+
+### Salvar múltiplos objetos em arquivo RData
+```R
+save(
+  list = c("pop_mg", "pop_uf"), # Vetor com nomes dos objetos em texto
+  file = "dados/processados/dados_mg.RData" # Caminho do arquivo de saída
+)
+```
+
+Importante: Permite salvar um conjunto de objetos selecionados em um único arquivo binário comprimido.
+
+### Importar arquivo de dados colunares Parquet
+```R
+read_parquet(
+  file = "dados/processados/censo_controlado.parquet" # Caminho do arquivo .parquet
+)
+```
+
+Importante: Função do pacote `arrow`. O Parquet é um formato colunar altamente comprimido que armazena metadados de tipos de colunas, ideal para grande volume de microdados.
+
+### Exportar tabela para formato Parquet
+```R
+write_parquet(
+  x = dados_df, # Data frame a ser exportado
+  sink = "dados/processados/censo_controlado.parquet" # Caminho do arquivo Parquet
+)
+```
+
+Importante: Requer o pacote `arrow`. Reduz drasticamente o tamanho em disco comparado ao CSV e acelera a releitura de grandes tabelas.
+
+---
+
+## Acesso a APIs Públicas e Fontes de Dados
+
+### Importar tabelas do IBGE via API do SIDRA
+```R
+get_sidra(
+  api = "/t/4709/n3/all/v/93/p/2022" # Endereço de parâmetros da API do SIDRA
+)
+```
+
+Importante: Função do pacote `sidrar`. O parâmetro `api =` consome diretamente o endpoint REST do SIDRA (ex: `/t/tabela/n/nivel/v/variavel/p/periodo`), evitando falhas de conexão de metadados.
+
+### Baixar microdados do DATASUS (SIM e SINASC)
+```R
+fetch_datasus(
+  year_start = 2022, # Ano inicial
+  year_end = 2022, # Ano final
+  uf = "MG", # Sigla da Unidade da Federação
+  information_system = "SIM-DO", # Sistema de informação (SIM-DO, SINASC, etc.)
+  vars = c("DTOBITO", "IDADE", "SEXO") # Colunas selecionadas para transferência
+)
+```
+
+Importante: Função do pacote `microdatasus`. Faz o download do FTP do DATASUS, descompacta arquivos no formato `.dbc` e carrega o microdado em estrutura tabular.
+
+### Ler linhas de texto de uma conexão ou URL
+```R
+readLines(
+  con = "url_api", # Conexão ou endereço de API
+  warn = FALSE # Silenciar avisos de término de linha
+)
+```
+
+Importante: Função base para carregar conteúdo textual bruto de links web ou APIs que retornam texto puro ou JSON.
+
+### Converter texto ou objeto JSON em estrutura R
+```R
+fromJSON(
+  txt = "dados_api.json" # String JSON ou caminho de arquivo
+)
+```
+
+Importante: Função do pacote `jsonlite`. Converte a estrutura hierárquica do JSON (comumente retornada por APIs públicas como SICONFI e SIDRA) em listas ou data frames.
+
+### Baixar arquivos de endereços Web ou FTP
+```R
+download.file(
+  url = "url_origem", # Endereço de origem
+  destfile = "dados/brutos/pib_municipios.zip", # Caminho do arquivo local de destino
+  mode = "wb" # Modo de gravação binário
+)
+```
+
+Importante: O argumento `mode = "wb"` é indispensável no Windows para evitar corrompimento de arquivos zipados ou binários transferidos via HTTP/FTP.
+
+---
+
+## Diagnóstico Estrutural, Tipos e Duplicados
+
+### Consultar a classe de um objeto
+```R
+class(
+  x = pop_mg # Objeto a ser analisado
+)
+```
+
+Importante: Retorna a classe do objeto (ex: `"spec_tbl_df"`, `"tbl_df"`, `"data.frame"`, `"factor"`).
+
+### Consultar o tipo de dado fundamental
+```R
+typeof(
+  x = populacao_mg # Objeto ou vetor
+)
+```
+
+Importante: Diferencia tipos primários do R, como `"double"`, `"integer"`, `"character"` e `"logical"`.
+
+### Consultar dimensões de uma tabela
+```R
+dim(
+  x = pop_mg # Data frame ou matriz
+)
+```
+
+Importante: Retorna um vetor contendo dois elementos numéricos: `[1] número de linhas` e `[2] número de colunas`.
+
+### Obter número de linhas
+```R
+nrow(
+  x = pop_mg # Data frame ou matriz
+)
+```
+
+Importante: Retorna a contagem exata de observações/linhas presentes na tabela.
+
+### Obter número de colunas
+```R
+ncol(
+  x = pop_mg # Data frame ou matriz
+)
+```
+
+Importante: Retorna o número total de variáveis/colunas contidas na tabela.
+
+### Consultar nomes das colunas de uma tabela
+```R
+names(
+  x = pop_mg # Data frame
+)
+```
+
+Importante: Em R base, `colnames(x)` produz o mesmo resultado para data frames.
+
+### Visualizar as primeiras linhas de uma tabela
+```R
+head(
+  x = pop_mg, # Data frame ou vetor
+  n = 6 # Número de linhas a exibir
+)
+```
+
+Importante: Exibe por padrão as 6 primeiras linhas da estrutura para inspeção inicial pós-importação.
+
+### Visualizar as últimas linhas de uma tabela
+```R
+tail(
+  x = pop_mg, # Data frame ou vetor
+  n = 6 # Número de linhas a exibir
+)
+```
+
+Importante: Exibe as últimas linhas da tabela, útil para checar se há rodapés descritivos do IBGE que foram importados indevidamente como dados.
+
+### Resumo estatístico de um objeto
+```R
+summary(
+  object = pop_mg # Data frame ou vetor
+)
+```
+
+Importante: Para colunas numéricas fornece os 5 números de Tukey mais a média; para caracteres ou fatores mostra frequências e comprimentos.
+
+### Identificar valores ausentes
+```R
+is.na(
+  x = pop_mg # Vetor, matriz ou data frame
+)
+```
+
+Importante: Retorna um vetor/matriz de valores lógicos (`TRUE` para posições com `NA` e `FALSE` para posições preenchidas).
+
+### Verificar existência de algum valor ausente
+```R
+anyNA(
+  x = pop_mg # Vetor ou data frame
+)
+```
+
+Importante: Retorna um único valor lógico (`TRUE` ou `FALSE`), sendo computacionalmente mais rápido do que `any(is.na(x))`.
+
+### Identificar registros totalmente completos
+```R
+complete.cases(
+  x = pop_mg # Data frame ou matriz
+)
+```
+
+Importante: Retorna um vetor lógico indicando quais linhas não possuem nenhum valor `NA` em nenhuma de suas colunas.
+
+### Omitir linhas com valores ausentes
+```R
+na.omit(
+  object = pop_mg # Data frame
+)
+```
+
+Importante: Remove todas as linhas da tabela que contenham pelo menos um valor `NA`. Deve ser usado com cautela em estatísticas públicas para não descartar dados parciais válidos.
+
+### Identificar registros duplicados
+```R
+duplicated(
+  x = pop_mg # Data frame ou vetor
+)
+```
+
+Importante: Retorna um vetor lógico indicando `TRUE` a partir da segunda ocorrência de um registro idêntico. A contagem total é obtida com `sum(duplicated(df))`.
+
+### Comparação de igualdade estrutural entre objetos
+```R
+all.equal(
+  target = pop_mg, # Primeiro objeto de referência
+  current = pop_rds # Segundo objeto a ser comparado
+)
+```
+
+Importante: Testa se dois objetos são idênticos em tipo, dimensões, nomes de colunas e valores. Retorna `TRUE` ou descreve pontualmente as divergências encontradas.

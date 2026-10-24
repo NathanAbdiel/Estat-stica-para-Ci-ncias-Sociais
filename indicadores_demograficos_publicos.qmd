@@ -1,0 +1,232 @@
+# Módulo 3: Indicadores Demográficos e Estatísticas Públicas
+
+A demografia e a estatística pública analisam a dinâmica populacional (volume, crescimento, distribuição etária e de sexo) e os eventos vitais (nascimentos no SINASC e óbitos no SIM). Este módulo apresenta as definições formais, fórmulas conceituais e aplicações sintáticas em R para indicadores demográficos de estrutura, natalidade, fecundidade, mortalidade e padronização direta.
+
+## Pacotes Necessários
+* `dplyr`
+* `tidyr`
+* `microdatasus`
+
+---
+
+## Crescimento e Dinâmica Populacional
+
+### Agrupamento por intervalos contínuos (Faixas Etárias)
+```R
+cut(
+  x = idade, # Vetor numérico contendo idades
+  breaks = c(0, 15, 65, Inf), # Pontos de corte dos intervalos
+  right = FALSE, # Intervalos fechados à esquerda [a, b)
+  labels = c("Jovens", "PIA", "Idosos") # Rótulos das categorias
+)
+```
+
+Importante: A opção `right = FALSE` garante que o limite inferior seja incluído na faixa (ex: idade 0 entra no grupo de 0 a 14 anos).
+
+### Obter valores defasados temporalmente
+```R
+lag(
+  x = populacao, # Vetor numérico
+  n = 1L # Número de posições de defasagem
+)
+```
+
+Importante: Desloca os elementos do vetor para trás em `n` posições. Essencial para calcular diferenças intercensitárias ou variações anuais (`populacao - lag(populacao)`).
+
+---
+
+## Indicadores de Estrutura Etária e de Sexo
+
+### Cálculo da Razão de Sexo (RS)
+```R
+mutate(
+  .data = pop_sexo, # Tabela com dados por sexo
+  razao_sexo = (Homens / Mulheres) * 100 # Expressão conceitual da Razão de Sexo
+)
+```
+
+Importante: Mede o número de homens para cada 100 mulheres em uma população ou faixa etária. Valores acima de 100 indicam predominância masculina; valores abaixo de 100, feminina.
+
+### Cálculo da Razão de Dependência de Jovens (RDJ)
+```R
+mutate(
+  .data = pop_estrutura, # Tabela de dados etários
+  rdj = (pop_0_14 / pop_15_64) * 100 # Expressão conceitual da RDJ
+)
+```
+
+Importante: Relaciona a população jovem (0 a 14 anos) com a população potencialmente ativa (15 a 64 anos).
+
+### Cálculo da Razão de Dependência de Idosos (RDI)
+```R
+mutate(
+  .data = pop_estrutura, # Tabela de dados etários
+  rdi = (pop_65_mais / pop_15_64) * 100 # Expressão conceitual da RDI
+)
+```
+
+Importante: Relaciona a população idosa (65 anos ou mais) com a população potencialmente ativa (15 a 64 anos). Na literatura do IBGE, o corte de idosos em razões de dependência é fixado em 65 anos.
+
+### Cálculo da Razão de Dependência Total (RD)
+```R
+mutate(
+  .data = pop_estrutura, # Tabela de dados etários
+  rd_total = ((pop_0_14 + pop_65_mais) / pop_15_64) * 100 # Expressão da Razão Total
+)
+```
+
+Importante: Expressa a carga de dependentes (jovens mais idosos) que precisa ser sustentada por cada 100 pessoas em idade ativa. O declínio seguido de alta da RD desenha uma curva em "U", marcando o bônus demográfico.
+
+### Cálculo do Índice de Envelhecimento (IE)
+```R
+mutate(
+  .data = pop_estrutura, # Tabela de dados etários
+  indice_envelhecimento = (pop_65_mais / pop_0_14) * 100 # Expressão conceitual do IE
+)
+```
+
+Importante: Mede o número de idosos (65+) para cada 100 jovens (0 a 14 anos). Reflete diretamente a transição demográfica e o envelhecimento populacional.
+
+---
+
+## Estatísticas Vitais de Natalidade e Fecundidade (SINASC)
+
+### Taxa Bruta de Natalidade (TBN)
+```R
+mutate(
+  .data = dados_natalidade, # Tabela contendo nascimentos e população
+  tbn = (nascidos_vivos / populacao_total) * 1000 # Expressão conceitual da TBN
+)
+```
+
+Importante: Relaciona os nascidos vivos do SINASC com a população total residente no meio do ano. É uma medida bruta porque sofre forte influência da composição etária e de sexo da população.
+
+### Taxa Geral de Fecundidade (TFG)
+```R
+mutate(
+  .data = dados_fecundidade, # Tabela com nascimentos e mulheres férteis
+  tfg = (nascidos_vivos / mulheres_15_49) * 1000 # Expressão conceitual da TFG
+)
+```
+
+Importante: Restringe o denominador à população exposta ao risco de ter filhos (mulheres na faixa reprodutiva tradicional de 15 a 49 anos).
+
+### Taxas Específicas de Fecundidade por Idade (TEF)
+```R
+mutate(
+  .data = dados_faixas_mae, # Tabela por faixa etária materna
+  tef = nascidos_faixa / mulheres_faixa # Expressão conceitual da TEF (filhos/mulher/ano)
+)
+```
+
+Importante: Calcula a fecundidade dentro de cada faixa quinquenal (15-19 até 45-49 anos). Não multiplica por 1000 quando o objetivo é somar as taxas para obter a TFT. Mães com menos de 15 anos entram na primeira faixa; mães com 50+ na última.
+
+### Taxa de Fecundidade Total (TFT)
+```R
+summarise(
+  .data = dados_tef_agrupados, # Tabela agrupada por local e ano
+  tft = 5 * sum(tef) # Expressão conceitual da TFT
+)
+```
+
+Importante: Medida sintética de período que expressa o número médio de filhos que uma mulher teria ao final de sua vida reprodutiva. O multiplicador 5 refere-se ao número de anos vividos em cada faixa quinquenal. O nível de reposição populacional é de aproximadamente 2,1 filhos por mulher.
+
+### Razão de Sexo ao Nascer (RSN)
+```R
+mutate(
+  .data = dados_nascimentos_sexo, # Tabela com nascimentos por sexo
+  rsn = (nascidos_masculinos / nascidos_femininos) * 100 # Expressão conceitual da RSN
+)
+```
+
+Importante: Mede o número de meninos nascidos vivos para cada 100 meninas. Em populações sem intervenção, mantém-se biologicamente estável em torno de 105.
+
+### Taxa Bruta de Reprodução (TBR)
+```R
+mutate(
+  .data = dados_reproducao, # Tabela com TFT e proporção feminina
+  tbr = tft * (nascidas_femininas / nascidos_totais) # Expressão conceitual da TBR
+)
+```
+
+Importante: Restringe a TFT ao número de filhas nascidas por mulher. Indica a capacidade de substituição da população feminina sem considerar a mortalidade.
+
+---
+
+## Estatísticas Vitais de Mortalidade (SIM)
+
+### Taxa Bruta de Mortalidade (TBM)
+```R
+mutate(
+  .data = dados_mortalidade, # Tabela com óbitos e população
+  tbm = (obitos_totais / populacao_total) * 1000 # Expressão conceitual da TBM
+)
+```
+
+Importante: Frequência geral de óbitos por mil habitantes no ano. Apresenta a armadilha de apontar valores mais elevados em populações envelhecidas de boa saúde do que em populações jovens de alta mortalidade.
+
+### Taxa Específica de Mortalidade por Idade (TEM)
+```R
+mutate(
+  .data = dados_mortalidade_faixas, # Tabela agrupada por faixa etária
+  tem = (obitos_faixa / populacao_faixa) * 1000 # Expressão conceitual da TEM
+)
+```
+
+Importante: Isola o risco de morte dentro de cada faixa etária. Desenha uma curva em formato de "J" ao longo das idades. Óbitos de idade ignorada ficam fora do cálculo das TEMs.
+
+### Taxa de Mortalidade Infantil (TMI)
+```R
+mutate(
+  .data = dados_infantis, # Tabela com óbitos <1 ano e nascidos vivos
+  tmi = (obitos_menores_1_ano / nascidos_vivos) * 1000 # Expressão conceitual da TMI
+)
+```
+
+Importante: Relaciona os óbitos de menores de 1 ano (registrados no SIM) com os nascidos vivos do mesmo ano (registrados no SINASC). Termômetro clássico das condições de vida e saúde.
+
+### Razão de Mortalidade Materna (RMM)
+```R
+mutate(
+  .data = dados_maternos, # Tabela com óbitos maternos e nascimentos
+  rmm = (obitos_maternos / nascidos_vivos) * 100000 # Expressão conceitual da RMM
+)
+```
+
+Importante: Relaciona os óbitos por causas maternas com os nascidos vivos do mesmo período. Expressa em óbitos por 100.000 nascidos vivos.
+
+### Padronização Direta de Taxas de Mortalidade
+```R
+summarise(
+  .data = dados_tem_padrao, # Tabela contendo TEM local e população padrão
+  tbm_padronizada = sum(tem * pop_padrao) / sum(pop_padrao) # Padronização direta
+)
+```
+
+Importante: Aplica as taxas específicas de mortalidade (TEM) locais sobre a estrutura etária de uma população-padrão fixa (ex: população do Brasil no Censo 2022). Permite comparar riscos reais de morte eliminando o efeito de composição etária.
+
+---
+
+## Funções Auxiliares de Suporte Demográfico
+
+### Preencher combinações implícitas de categorias
+```R
+complete(
+  data = tabela_obitos, # Tabela de dados
+  faixa_etaria, # Variável que precisa ter todas as categorias
+  fill = list(obitos = 0L) # Valor para preencher combinações inexistentes
+)
+```
+
+Importante: Função do `tidyr`. Garante que faixas etárias sem registros no SIM/SINASC continuem presentes na tabela com contagem zero (`0L`), evitando omissão de linhas em calculadoras demográficas.
+
+### Recodificar valores categóricos
+```R
+recode(
+  .x = vetor_codigos, # Vetor a recodificar
+  "1" = "Urbana", # "valor_antigo" = "valor_novo"
+  "2" = "Rural" # "valor_antigo" = "valor_novo"
+)
+```
+
+Importante: Substitui valores de vetores de caracteres ou fatores com base na correspondência direta fornecida. No `dplyr` recente, encoraja-se o uso do `case_match()`.

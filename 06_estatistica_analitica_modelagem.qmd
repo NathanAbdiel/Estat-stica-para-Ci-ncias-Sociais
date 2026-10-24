@@ -1,0 +1,354 @@
+# Módulo 6: Análise Estatística e Modelagem Preditiva
+
+Este módulo reúne as principais funções estatísticas e de modelagem preditiva no R, abordando desde testes de hipótese e associação até regressões (linear simples, múltipla e logística), ANOVA e métodos não paramétricos de forma genérica e estruturada.
+
+## Pacotes Necessários
+
+- `stats`
+
+- `car`
+
+------------------------------------------------------------------------
+
+## Estatística Descritiva e Medidas de Posição/Dispersão
+
+### Cálculo da média aritmética
+
+``` r
+
+mean(
+
+  x = vetor_numerico, # Vetor numérico
+
+  na.rm = TRUE # Remover valores ausentes antes do cálculo
+
+)
+```
+
+**Importante:** Função base do R. Retorna `NA` se houver valores ausentes e `na.rm = FALSE`. Sensível a valores extremos.
+
+### Cálculo da mediana
+
+``` r
+
+median(
+
+  x = vetor_numerico, # Vetor numérico
+
+  na.rm = TRUE # Remover valores ausentes
+
+)
+```
+
+**Importante:** Medida de tendência central resistente a valores extremos e distribuições assimétricas.
+
+### Cálculo do desvio padrão e variância
+
+``` r
+
+sd(
+
+  x = vetor_numerico, # Vetor numérico
+
+  na.rm = TRUE # Remover valores ausentes
+
+)
+```
+
+**Importante:** O desvio padrão calcula a dispersão na mesma unidade da variável. Para obter a variância, utiliza-se `var()`.
+
+### Cálculo de quantis e amplitude interquartil
+
+``` r
+
+quantile(
+
+  x = vetor_numerico, # Vetor numérico
+
+  probs = c(0.25, 0.5, 0.75), # Probabilidades/Percentis desejados
+
+  na.rm = TRUE # Remover valores ausentes
+
+)
+```
+
+**Importante:** Retorna os pontos de corte da distribuição. O intervalo interquartil pode ser obtido diretamente com `IQR()`.
+
+------------------------------------------------------------------------
+
+## Testes de Hipóteses e Comparação de Grupos (`t.test` e `wilcox.test`)
+
+### Teste t para uma amostra
+
+``` r
+
+t.test(
+
+  x = vetor_numerico, # Vetor numérico
+
+  mu = valor_referencia, # Valor hipotético da média populacional (H0)
+
+  conf.level = 0.95 # Nível de confiança
+
+)
+```
+
+**Importante:** Avalia se a média de uma amostra difere significativamente de um valor fixo de referência. Pressupõe normalidade.
+
+### Teste t para duas amostras independentes
+
+``` r
+
+t.test(
+
+  formula = variavel_resposta ~ variavel_grupo, # Resposta ~ Grupo (2 categorias)
+
+  data = nome_do_dataframe, # Data frame contendo as variáveis
+
+  var.equal = FALSE # Assumir variâncias desiguais por padrão (Welch)
+
+)
+```
+
+**Importante:** Por padrão (`var.equal = FALSE`), executa a correção de Welch para variâncias heterogêneas.
+
+### Teste t para amostras pareadas
+
+``` r
+
+t.test(
+
+  x = vetor_amostra_1, # Primeira medição
+
+  y = vetor_amostra_2, # Segunda medição (mesmo elemento)
+
+  paired = TRUE # Habilitar teste pareado
+
+)
+```
+
+**Importante:** Utilizado para comparações em pares ou medidas repetidas nos mesmos sujeitos.
+
+### Teste de Wilcoxon-Mann-Whitney (Não Paramétrico)
+
+``` r
+
+wilcox.test(
+
+  formula = variavel_resposta ~ variavel_grupo, # Resposta ~ Grupo
+
+  data = nome_do_dataframe # Data frame contendo as variáveis
+
+)
+```
+
+**Importante:** Alternativa não paramétrica ao teste t de duas amostras para dados não normais ou ordinais.
+
+------------------------------------------------------------------------
+
+## Associação e Correlação (`chisq.test` e `cor.test`)
+
+### Teste de Qui-Quadrado de Independência
+
+``` r
+
+chisq.test(
+
+  x = table(nome_do_dataframe$coluna_fator_1, nome_do_dataframe$coluna_fator_2) # Tabela de contingência 2D
+
+)
+```
+
+**Importante:** Avalia a associação entre duas variáveis categóricas. Requer frequências esperadas adequadas por célula.
+
+### Análise de Resíduos Padronizados do Qui-Quadrado
+
+``` r
+
+chisq.test(
+
+  x = table(nome_do_dataframe$coluna_fator_1, nome_do_dataframe$coluna_fator_2)
+
+)$stdres
+```
+
+**Importante:** Acessa os resíduos padronizados para identificar células específicas com desvios significativos em relação à independência.
+
+### Teste de Correlação Linear de Pearson
+
+``` r
+
+cor.test(
+
+  x = vetor_numerico_1, # Primeira variável contínua
+
+  y = vetor_numerico_2, # Segunda variável contínua
+
+  method = "pearson" # Método de correlação linear
+
+)
+```
+
+**Importante:** Mede a força e direção da associação linear entre duas variáveis quantitativas contínuas.
+
+### Teste de Correlação Não Paramétrica de Spearman
+
+``` r
+
+cor.test(
+
+  x = vetor_ordinal_1, # Primeira variável ordinal ou contínua com assimetria
+
+  y = vetor_ordinal_2, # Segunda variável ordinal ou contínua com assimetria
+
+  method = "spearman" # Método baseado em postos (ranks)
+
+)
+```
+
+**Importante:** Avalia a relação monotônica entre variáveis quando a premissa de linearidade ou normalidade é violada.
+
+------------------------------------------------------------------------
+
+## Regressão Linear Simples e Múltipla (`lm`)
+
+### Ajuste de Regressão Linear Simples
+
+``` r
+
+lm(
+
+  formula = variavel_resposta ~ variavel_explicativa, # Y ~ X
+
+  data = nome_do_dataframe # Data frame de trabalho
+
+)
+```
+
+**Importante:** Modela a relação linear entre uma resposta contínua ($Y$) e um preditor ($X$). O resumo estatístico completo é obtido com `summary()`.
+
+### Ajuste de Regressão Linear Múltipla
+
+``` r
+
+lm(
+
+  formula = variavel_resposta ~ explicativa_1 + explicativa_2 + explicativa_3, # Y ~ X1 + X2 + X3
+
+  data = nome_do_dataframe # Data frame de trabalho
+
+)
+```
+
+**Importante:** Estima o efeito parcial de múltiplos preditores sobre a resposta. Avalie o $R^2$ ajustado para evitar sobreajuste.
+
+### Diagnóstico de Multicolinearidade (VIF)
+
+``` r
+
+vif(
+
+  mod = objeto_modelo_linear # Objeto retornado por lm()
+
+)
+```
+
+**Importante:** Função do pacote `car`. Valores elevados de VIF indicam multicolinearidade problemática entre os preditores.
+
+------------------------------------------------------------------------
+
+## Regressão Logística (`glm`)
+
+### Ajuste de Modelo de Regressão Logística Binária
+
+``` r
+
+glm(
+
+  formula = variavel_binaria ~ explicativa_1 + explicativa_2, # Resposta (0/1) ~ Preditores
+
+  family = binomial(link = "logit"), # Família binomial com ligação logit
+
+  data = nome_do_dataframe # Data frame de trabalho
+
+)
+```
+
+**Importante:** Utilizada para respostas binárias. Os coeficientes obtidos encontram-se na escala de *log-odds*.
+
+### Cálculo das Razões de Chance (Odds Ratio - OR)
+
+``` r
+
+exp(
+
+  x = coef(objeto_modelo_logistico) # Exponencial dos coeficientes logit
+
+)
+```
+
+**Importante:** Converte os coeficientes de log-odds para Razões de Chance (*Odds Ratio*), facilitando a interpretação substantiva.
+
+------------------------------------------------------------------------
+
+## Análise de Variância (ANOVA) e Testes Post-Hoc (`aov`)
+
+### ANOVA One-Way (Comparação de Múltiplos Grupos)
+
+``` r
+
+aov(
+
+  formula = variavel_resposta ~ variavel_grupo, # Resposta contínua ~ Grupo com k categorias
+
+  data = nome_do_dataframe # Data frame de trabalho
+
+)
+```
+
+**Importante:** Testa a igualdade de médias entre três ou more grupos independentes.
+
+### Teste Post-Hoc de Tukey (Comparações Múltiplas)
+
+``` r
+
+TukeyHSD(
+
+  x = aov(formula = variavel_resposta ~ variavel_grupo, data = nome_do_dataframe) # Objeto aov pré-ajustado
+
+)
+```
+
+**Importante:** Executa comparações par a par entre os níveis do grupo controlando a taxa de erro global.
+
+------------------------------------------------------------------------
+
+## Diagnóstico de Suposições (`shapiro.test` e `kruskal.test`)
+
+### Teste de Normalidade de Shapiro-Wilk
+
+``` r
+
+shapiro.test(
+
+  x = vetor_residuos # Vetor de dados numéricos ou resíduos de um modelo
+
+)
+```
+
+**Importante:** Testa a hipótese nula de normalidade da distribuição. Valores de $p < 0.05$ rejeitam a normalidade.
+
+### Teste de Kruskal-Wallis (Alternativa Não Paramétrica à ANOVA)
+
+``` r
+
+kruskal.test(
+
+  formula = variavel_resposta ~ variavel_grupo, # Resposta ~ Grupo
+
+  data = nome_do_dataframe # Data frame de trabalho
+
+)
+```
+
+**Importante:** Alternativa não paramétrica para a ANOVA quando os resíduos não atendem aos pressupostos paramétricos.
